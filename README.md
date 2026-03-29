@@ -27,7 +27,7 @@ To switch back to HDMI: `sudo ./LCD-hdmi`
 ## Install
 
 ```bash
-git clone https://github.com/yourusername/piticker.git
+git clone https://github.com/rockdarko/piticker.git
 cd piticker
 sudo ./install.sh
 ```
@@ -90,6 +90,16 @@ sudo ./uninstall.sh
 ```
 
 Removes services, files, and state. Does not change screen rotation settings.
+
+## How this was built
+
+This project was vibe coded from start to finish. I'm not a developer — I'm an SRE who lives in terminals, writes Bash and Ansible in my sleep, and spends my days wrangling metrics and keeping systems alive. I had the idea for a desk ticker, knew exactly how I wanted it to work, and paired with AI to build it.
+
+The entire project — every feature, every bug fix, every UI decision — was built in a single session using [Claude Code](https://claude.ai/claude-code) with the [Get Shit Done (GSD)](https://github.com/gsd-build/get-shit-done) workflow framework. GSD handled the planning, phasing, execution, and verification while I drove the product decisions.
+
+**Models used:** Claude Opus 4.6 (orchestration), Claude Sonnet 4.6 (planning, research, execution agents)
+
+The result: ~2,200 lines of pure Bash and vanilla JS, zero frameworks, zero build tools — just the kind of clean, dependency-light stack an SRE can appreciate.
 
 ## License
 
