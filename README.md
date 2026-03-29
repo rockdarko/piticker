@@ -2,11 +2,74 @@
 
 Fullscreen stock and crypto price display for Raspberry Pi with GPIO touchscreen. Prices render as large ASCII art using [figlet](http://www.figlet.org/) fonts, color-coded green/red for up/down. Control everything from your phone via the built-in web UI.
 
-## What it looks like
+<!-- TODO: add hero photo of the Pi display here -->
 
-- **Single mode** — one symbol, big ASCII art price filling the screen
-- **Slideshow mode** — cycles through symbols with configurable interval
-- **List mode** — table view of multiple symbols at once
+## Display Modes
+
+### Single
+
+One symbol fills the entire screen. The ticker name renders at the top, the price dominates the center in large ASCII art, and the percent change sits below. Colors flip green or red based on the day's movement.
+
+Best for keeping an eye on one thing — BTC on your desk, your main holding on the shelf.
+
+<!-- TODO: single mode photo -->
+
+### Slideshow
+
+Cycles through a list of symbols one at a time, each displayed fullscreen like single mode. The rotation interval is adjustable from 2 to 60 seconds via a slider in the web UI.
+
+Best for watching a portfolio — set your symbols, set your pace, let it rotate.
+
+<!-- TODO: slideshow mode photo -->
+
+### List
+
+All symbols displayed simultaneously in a color-coded table with columns for symbol, price, change, and percent. Each row is independently colored green/red. Prices are fetched in parallel for fast updates.
+
+Best for a quick dashboard view of everything at once.
+
+<!-- TODO: list mode photo -->
+
+## Features
+
+### Web Control Panel
+Control everything from your phone or laptop — no SSH needed. Dark-themed, mobile-friendly UI served directly from the Pi.
+
+- **Mode switching** — tap Single, Slideshow, or List to change instantly
+- **Symbol management** — add, remove, and drag-to-reorder symbols
+- **Display names** — rename any symbol for the display (e.g., "CL=F" → "Oil", "BTC-USD" → "BTC"). The real ticker is always visible alongside the alias
+- **Cents control** — per-symbol option to always show cents, always hide them, or let the display auto-decide based on screen space
+- **Font preview** — browse 300+ figlet fonts with a live ASCII art preview of all three font slots before applying. One-click Apply sends changes to the display
+- **Slideshow interval** — drag a slider to set rotation speed (2-60 seconds)
+
+### Instant Response
+Mode changes, symbol additions, font switches — everything takes effect within a second. The display uses `inotifywait` to watch for state file changes and reacts immediately instead of waiting for a polling interval.
+
+### Smart Font Rendering
+Prices render in large ASCII art using three independent font slots:
+- **Ticker font** — the symbol name (e.g., BTC)
+- **Price font** — the big price number (e.g., $42,567)
+- **Change font** — the percent change (e.g., +2.34%)
+
+The display auto-fits: if your chosen font is too wide for the screen, it tries the text without cents first, then gracefully falls back to progressively smaller fonts. You can also force cents on or off per symbol to control what gets displayed.
+
+### Per-Symbol Settings
+Each symbol can have its own:
+- **Display name** — custom label for the screen (raw ticker always visible in the web UI)
+- **Cents preference** — Auto (drops cents for prices over $1,000), Show (always), or Hide (never)
+
+Settings persist across reboots and mode changes.
+
+## Symbols
+
+Works with anything Yahoo Finance supports:
+- **Stocks** — `AAPL`, `MSFT`, `NVDA`, `TSLA`
+- **Crypto** — `BTC-USD`, `ETH-USD`, `SOL-USD`
+- **Indices** — `^GSPC` (S&P 500), `^DJI` (Dow Jones)
+- **Forex** — `EURUSD=X`, `GBPUSD=X`
+- **Commodities** — `CL=F` (Oil), `GC=F` (Gold)
+
+Prices refresh every 60 seconds by default (configurable via CLI argument).
 
 ## Hardware
 
@@ -32,55 +95,74 @@ cd piticker
 sudo ./install.sh
 ```
 
-The installer will:
-1. Check for GPIO display configuration
-2. Offer to rotate the screen 180° (for upside-down mounts)
+The interactive installer will:
+1. Check for GPIO display configuration (links to LCD-show if not found)
+2. Offer to rotate the screen 180° (for upside-down mounted screens)
 3. Ask for install path, initial symbols, web UI port, and display TTY
-4. Install dependencies (figlet, jq, curl, socat, inotify-tools)
+4. Install dependencies (figlet, toilet, jq, curl, socat, inotify-tools)
 5. Set up systemd services that start on boot
-
-## Web Control
+6. Start the display and control server
 
 After install, open `http://<pi-ip>:8080/` from any device on the network.
 
-**Features:**
-- Switch display modes (Single / Slideshow / List)
-- Add and remove symbols — stocks, crypto, indices, forex
-- Drag to reorder symbols
-- Set custom display names (e.g., "CL=F" → "Oil")
-- Choose cents display per symbol (Auto / Show / Hide)
-- Live font preview with Apply button
-- Adjustable slideshow interval
+## Fonts
 
-## Symbols
+PiTicker uses [figlet](http://www.figlet.org/) to render prices as large ASCII art. The installer pulls in both `figlet` and `toilet` which together provide 300+ fonts.
 
-Works with anything Yahoo Finance supports:
-- **Stocks** — `AAPL`, `MSFT`, `NVDA`, `TSLA`
-- **Crypto** — `BTC-USD`, `ETH-USD`, `SOL-USD`
-- **Indices** — `^GSPC` (S&P 500), `^DJI` (Dow Jones)
-- **Forex** — `EURUSD=X`, `GBPUSD=X`
-- **Commodities** — `CL=F` (Oil), `GC=F` (Gold)
+The web UI lets you preview any font before applying — select a font from any of the three dropdowns and the preview panel shows all three slots rendered together, exactly as they'll appear on the display.
+
+Some fonts that work well on small GPIO screens:
+
+| Font | Style |
+|------|-------|
+| `Banner` | Classic block letters |
+| `Colossal` | Very large, bold |
+| `big` | Clean and wide |
+| `ANSI Shadow` | Shadow effect with box-drawing |
+| `DOS Rebel` | Retro DOS style |
+| `Doom` | Bold and chunky |
+| `Electronic` | Digital/LED look |
 
 ## Managing
 
 ```bash
-# Start / stop / restart
+# Start / stop / restart the display
 sudo systemctl start piticker
 sudo systemctl stop piticker
 sudo systemctl restart piticker
 
-# Control server
+# Start / stop the control server
 sudo systemctl start piticker-ctl
 sudo systemctl stop piticker-ctl
 
 # View logs
 journalctl -u piticker -f
+```
 
-# Change what's displayed (no SSH needed)
+Everything can also be controlled via HTTP — no SSH needed:
+
+```bash
+# Switch symbol (keeps your list, just focuses this one)
 curl http://pi:8080/set/ETH-USD
+
+# Switch to slideshow with multiple symbols
+curl http://pi:8080/slideshow/BTC-USD,ETH-USD,AAPL
+
+# Switch to list view
 curl http://pi:8080/list/BTC-USD,ETH-USD,AAPL
+
+# Add / remove from current list
 curl http://pi:8080/add/NVDA
 curl http://pi:8080/remove/AAPL
+
+# Set display name
+curl http://pi:8080/alias/set/CL%3DF/Oil
+
+# Set cents preference
+curl http://pi:8080/cents/set/BTC-USD/no
+
+# Change font
+curl http://pi:8080/font/ANSI%20Shadow
 ```
 
 ## Uninstall
@@ -90,19 +172,6 @@ sudo ./uninstall.sh
 ```
 
 Removes services, files, and state. Does not change screen rotation settings.
-
-## Fonts
-
-PiTicker uses [figlet](http://www.figlet.org/) to render prices as large ASCII art. It ships with whatever fonts are installed on your system — the installer pulls in both `figlet` and `toilet` which together provide 300+ fonts.
-
-The web UI lets you preview any installed font before applying it. PiTicker uses three independent font slots:
-- **Ticker font** — the symbol name (e.g., BTC)
-- **Price font** — the big price display (e.g., $42,567)
-- **Change font** — the percent change (e.g., +2.34%)
-
-The display auto-fits: if your chosen font is too wide for the screen, it gracefully falls back to a smaller font. You can also force cents on or off per symbol to help things fit.
-
-Some fonts that work well on small GPIO screens: `Banner`, `Colossal`, `big`, `ANSI Shadow`, `DOS Rebel`, `Doom`, `Electronic`.
 
 ## How this was built
 
