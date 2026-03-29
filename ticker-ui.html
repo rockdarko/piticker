@@ -32,8 +32,7 @@ h1{font-size:1.4em;font-weight:600;margin-bottom:20px;color:#58a6ff;text-align:c
 .status-bar .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#3fb950;margin-right:6px;vertical-align:middle}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1f6feb;color:#fff;padding:10px 20px;border-radius:8px;font-size:.85em;opacity:0;transition:opacity .3s;pointer-events:none;z-index:99}
 .toast.show{opacity:1}
-#preview-pre{font-family:"SF Mono","Cascadia Code","Fira Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;font-size:0.7em;line-height:1.2;white-space:pre;overflow-x:auto;max-width:100%;tab-size:8;color:#e1e4e8;min-height:2em;display:inline-block}
-#preview-card{text-align:center}
+#preview-pre{font-family:"SF Mono","Cascadia Code","Fira Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;font-size:0.7em;line-height:1.2;white-space:pre;overflow-x:auto;max-width:100%;tab-size:8;color:#e1e4e8;min-height:2em}
 .apply-all-btn{width:100%;padding:12px;border:none;border-radius:8px;background:#1f6feb;color:#fff;font-size:1em;font-weight:600;cursor:pointer;margin-bottom:16px;transition:opacity .2s}
 .apply-all-btn:hover{background:#388bfd}
 .card.pending{border-left:3px solid #d29922}
@@ -257,6 +256,17 @@ function fetchAllPreviews() {
     return { font: "Price", sym_font: "Ticker", info_font: "Change" }[s] || s;
   }
 
+  // Center a block of figlet text: find max line width across all blocks,
+  // then pad each line so it's centered within that width
+  function centerBlock(text, maxWidth) {
+    var blockLines = text.split("\n");
+    return blockLines.map(function(line) {
+      var stripped = line.replace(/\s+$/, "");
+      var pad = Math.max(0, Math.floor((maxWidth - stripped.length) / 2));
+      return Array(pad + 1).join(" ") + stripped;
+    }).join("\n");
+  }
+
   // Render combined output once all three slots have resolved
   function renderCombined() {
     var slotOrder = ["sym_font", "font", "info_font"];
@@ -266,17 +276,28 @@ function fetchAllPreviews() {
     if (!allResolved) return;
 
     var anyError = false;
-    var lines = [];
+
+    // Find the widest line across all blocks for centering
+    var maxWidth = 0;
+    slotOrder.forEach(function(s) {
+      var text = errors[s] ? ("--- " + slotLabel(s) + " error: " + errors[s] + " ---") : (results[s] || "");
+      text.split("\n").forEach(function(line) {
+        var w = line.replace(/\s+$/, "").length;
+        if (w > maxWidth) maxWidth = w;
+      });
+    });
+
+    var blocks = [];
     slotOrder.forEach(function(s) {
       if (errors[s]) {
         anyError = true;
-        lines.push("--- " + slotLabel(s) + " error: " + errors[s] + " ---");
+        blocks.push(centerBlock("--- " + slotLabel(s) + " error: " + errors[s] + " ---", maxWidth));
       } else {
-        lines.push(results[s]);
+        blocks.push(centerBlock(results[s], maxWidth));
       }
     });
 
-    pre.textContent = lines.join("\n\n");  // textContent, never innerHTML (PITFALLS.md Pitfall 3)
+    pre.textContent = blocks.join("\n\n");  // textContent, never innerHTML (PITFALLS.md Pitfall 3)
     pre.style.color = anyError ? "#f85149" : "#e1e4e8";
   }
 
