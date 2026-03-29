@@ -1,6 +1,6 @@
 # PiTicker
 
-Fullscreen stock and crypto price display for Raspberry Pi with GPIO touchscreen. Prices render as large ASCII art, color-coded green/red for up/down. Control everything from your phone via the built-in web UI.
+Fullscreen stock and crypto price display for Raspberry Pi with GPIO touchscreen. Prices render as large ASCII art using [figlet](http://www.figlet.org/) fonts, color-coded green/red for up/down. Control everything from your phone via the built-in web UI.
 
 ## What it looks like
 
@@ -90,6 +90,19 @@ sudo ./uninstall.sh
 ```
 
 Removes services, files, and state. Does not change screen rotation settings.
+
+## Fonts
+
+PiTicker uses [figlet](http://www.figlet.org/) to render prices as large ASCII art. It ships with whatever fonts are installed on your system — the installer pulls in both `figlet` and `toilet` which together provide 300+ fonts.
+
+The web UI lets you preview any installed font before applying it. PiTicker uses three independent font slots:
+- **Ticker font** — the symbol name (e.g., BTC)
+- **Price font** — the big price display (e.g., $42,567)
+- **Change font** — the percent change (e.g., +2.34%)
+
+The display auto-fits: if your chosen font is too wide for the screen, it gracefully falls back to a smaller font. You can also force cents on or off per symbol to help things fit.
+
+Some fonts that work well on small GPIO screens: `Banner`, `Colossal`, `big`, `ANSI Shadow`, `DOS Rebel`, `Doom`, `Electronic`.
 
 ## How this was built
 
