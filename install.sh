@@ -120,28 +120,36 @@ fi
 
 step "Screen rotation"
 
-echo -e "  Some GPIO screens mount upside-down depending on case design."
-echo -e "  Current rotation: ${BOLD}${CURRENT_ROTATE:-not set}${RESET}"
-echo ""
-
 ROTATE_CHOICE="skip"
 if [[ "$GPIO_DETECTED" == "true" ]]; then
-    if ask_yn "Rotate display 180°?" "n"; then
-        ROTATE_CHOICE="flip"
-        if [[ -n "$CURRENT_ROTATE" ]]; then
-            case "$CURRENT_ROTATE" in
-                0)   NEW_ROTATE=180 ;;
-                90)  NEW_ROTATE=270 ;;
-                180) NEW_ROTATE=0 ;;
-                270) NEW_ROTATE=90 ;;
-                *)   NEW_ROTATE=180 ;;
-            esac
+    echo -e "  Some GPIO screens mount upside-down depending on case design."
+    echo -e "  Current rotation: ${BOLD}${CURRENT_ROTATE:-not set}°${RESET}"
+    echo ""
+    echo -e "  ${BOLD}1)${RESET} 0°   — Normal (connectors at bottom)"
+    echo -e "  ${BOLD}2)${RESET} 90°  — Rotated left"
+    echo -e "  ${BOLD}3)${RESET} 180° — Flipped upside-down (connectors at top)"
+    echo -e "  ${BOLD}4)${RESET} 270° — Rotated right"
+    echo -e "  ${BOLD}5)${RESET} Keep current (${CURRENT_ROTATE:-0}°)"
+    echo ""
+    echo -en "  ${BOLD}Choose rotation${RESET} ${DIM}[5]${RESET}: "
+    read -r rot_input
+    rot_input="${rot_input:-5}"
+    case "$rot_input" in
+        1) NEW_ROTATE=0;   ROTATE_CHOICE="set" ;;
+        2) NEW_ROTATE=90;  ROTATE_CHOICE="set" ;;
+        3) NEW_ROTATE=180; ROTATE_CHOICE="set" ;;
+        4) NEW_ROTATE=270; ROTATE_CHOICE="set" ;;
+        *) ROTATE_CHOICE="skip" ;;
+    esac
+    if [[ "$ROTATE_CHOICE" == "set" ]]; then
+        if [[ "$NEW_ROTATE" == "${CURRENT_ROTATE:-0}" ]]; then
+            ok "Already at ${NEW_ROTATE}° — no change needed"
+            ROTATE_CHOICE="skip"
         else
-            NEW_ROTATE=180
+            ok "Will set rotation to ${NEW_ROTATE}° (takes effect on next boot)"
         fi
-        ok "Will set rotation to ${NEW_ROTATE}° (takes effect on next boot)"
     else
-        ok "Keeping current rotation"
+        ok "Keeping current rotation (${CURRENT_ROTATE:-0}°)"
     fi
 fi
 
@@ -173,7 +181,7 @@ echo -e "  ${BOLD}Install path:${RESET}    ${INSTALL_DIR}"
 echo -e "  ${BOLD}Symbols:${RESET}         ${SYMBOLS}"
 echo -e "  ${BOLD}Control port:${RESET}    ${PORT}"
 echo -e "  ${BOLD}Display TTY:${RESET}     tty${TTY_NUM}"
-[[ "$ROTATE_CHOICE" == "flip" ]] && \
+[[ "$ROTATE_CHOICE" == "set" ]] && \
 echo -e "  ${BOLD}Rotation:${RESET}        ${NEW_ROTATE}°"
 echo ""
 
@@ -220,17 +228,20 @@ chmod +x "${INSTALL_DIR}/ticker.sh" "${INSTALL_DIR}/tickerctl.sh"
 
 # ── Step 8: Apply rotation ───────────────────────────────────
 
-if [[ "$ROTATE_CHOICE" == "flip" ]]; then
+if [[ "$ROTATE_CHOICE" == "set" ]]; then
     step "Applying screen rotation"
 
     if [[ -n "$ROTATE_LINE" ]]; then
         # Replace existing rotate value
-        OLD_PATTERN=$(echo "$ROTATE_LINE" | sed 's/[.[\*^$()+?{|]/\\&/g')
         NEW_LINE=$(echo "$ROTATE_LINE" | sed "s/rotate=${CURRENT_ROTATE}/rotate=${NEW_ROTATE}/")
         sed -i "s|${ROTATE_LINE}|${NEW_LINE}|" /boot/config.txt
         ok "Updated /boot/config.txt: rotate=${NEW_ROTATE}"
+    elif [[ -n "$OVERLAY_LINE" ]]; then
+        # Overlay exists but no rotate parameter — append it
+        sed -i "s|${OVERLAY_LINE}|${OVERLAY_LINE}:rotate=${NEW_ROTATE}|" /boot/config.txt
+        ok "Added rotate=${NEW_ROTATE} to ${OVERLAY_LINE}"
     else
-        warn "Could not find rotate parameter to update"
+        warn "Could not find display overlay to update"
     fi
 fi
 
@@ -307,5 +318,5 @@ echo -e "    sudo systemctl start|stop|restart piticker"
 echo -e "    sudo systemctl start|stop|restart piticker-ctl"
 echo -e "    journalctl -u piticker -f"
 echo ""
-[[ "$ROTATE_CHOICE" == "flip" ]] && \
+[[ "$ROTATE_CHOICE" == "set" ]] && \
 echo -e "  ${YELLOW}Reboot required for screen rotation to take effect.${RESET}" && echo ""
