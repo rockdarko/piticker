@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ticker Control</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f1117;color:#e1e4e8;min-height:100vh;padding:20px}
+.container{max-width:540px;margin:0 auto}
+h1{font-size:1.4em;font-weight:600;margin-bottom:20px;color:#58a6ff;text-align:center;letter-spacing:1px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:16px;margin-bottom:16px}
+.card h2{font-size:.85em;text-transform:uppercase;letter-spacing:1px;color:#8b949e;margin-bottom:12px}
+.mode-btns{display:flex;gap:8px}
+.mode-btns button{flex:1;padding:10px;border:1px solid #30363d;border-radius:8px;background:#21262d;color:#c9d1d9;font-size:.9em;cursor:pointer;transition:all .15s}
+.mode-btns button:hover{border-color:#58a6ff;color:#58a6ff}
+.mode-btns button.active{background:#1f6feb;border-color:#1f6feb;color:#fff;font-weight:600}
+.symbols-list{list-style:none;margin-bottom:12px}
+.symbols-list li{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;margin-bottom:6px;font-family:"SF Mono",Monaco,monospace;font-size:.95em;font-weight:500}
+.symbols-list li .remove{background:none;border:none;color:#f85149;cursor:pointer;font-size:1.1em;padding:2px 6px;border-radius:4px}
+.symbols-list li .remove:hover{background:#f8514922}
+.add-row{display:flex;gap:8px}
+.add-row input{flex:1;padding:8px 12px;border:1px solid #30363d;border-radius:8px;background:#0d1117;color:#f0f6fc;font-family:"SF Mono",Monaco,monospace;font-size:.9em}
+.add-row input::placeholder{color:#484f58}
+.add-row input:focus{outline:none;border-color:#58a6ff}
+.add-row button{padding:8px 16px;border:none;border-radius:8px;background:#238636;color:#fff;font-weight:600;cursor:pointer;font-size:.9em}
+.add-row button:hover{background:#2ea043}
+.font-row{display:flex;gap:8px}
+.font-row select{flex:1;padding:8px 12px;border:1px solid #30363d;border-radius:8px;background:#0d1117;color:#f0f6fc;font-size:.9em;appearance:none;-webkit-appearance:none}
+.font-row select:focus{outline:none;border-color:#58a6ff}
+.status-bar{text-align:center;padding:8px;color:#8b949e;font-size:.8em}
+.status-bar .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#3fb950;margin-right:6px;vertical-align:middle}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1f6feb;color:#fff;padding:10px 20px;border-radius:8px;font-size:.85em;opacity:0;transition:opacity .3s;pointer-events:none;z-index:99}
+.toast.show{opacity:1}
+#preview-pre{font-family:"SF Mono","Cascadia Code","Fira Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;font-size:0.7em;line-height:1.2;white-space:pre;overflow-x:auto;max-width:100%;tab-size:8;color:#e1e4e8;min-height:2em}
+.apply-all-btn{width:100%;padding:12px;border:none;border-radius:8px;background:#1f6feb;color:#fff;font-size:1em;font-weight:600;cursor:pointer;margin-bottom:16px;transition:opacity .2s}
+.apply-all-btn:hover{background:#388bfd}
+.card.pending{border-left:3px solid #d29922}
+#preview-card h2{font-size:.85em;text-transform:uppercase;letter-spacing:1px;color:#8b949e;margin-bottom:8px}
+.interval-row{margin-top:12px;padding:10px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px}
+.interval-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.interval-label{font-size:.8em;text-transform:uppercase;letter-spacing:.5px;color:#8b949e}
+.interval-val{padding:2px 8px;background:#21262d;border:1px solid #30363d;border-radius:6px;color:#e1e4e8;font-family:"SF Mono",Monaco,monospace;font-size:.85em;font-weight:600}
+.interval-row input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:#21262d;border-radius:2px;outline:none}
+.interval-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#1f6feb;border:2px solid #388bfd;cursor:pointer;transition:transform .15s}
+.interval-row input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);background:#388bfd}
+.interval-row input[type=range]::-webkit-slider-thumb:active{transform:scale(1.1);background:#58a6ff}
+.interval-row input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#1f6feb;border:2px solid #388bfd;cursor:pointer}
+.interval-row input[type=range]::-moz-range-track{height:4px;background:#21262d;border-radius:2px}
+.drag-handle{cursor:grab;color:#484f58;padding:2px 8px 2px 0;user-select:none;touch-action:none;font-size:1.1em}
+.drag-handle:active{cursor:grabbing}
+.symbols-list li.dragging{opacity:0.4;background:#1f2937}
+.sym{flex:1;color:#f0f6fc}
+.sym .alias-name{color:#f0f6fc;font-weight:500}
+.sym .raw-name{color:#8b949e;font-size:.85em;margin-left:6px}
+.edit-btn{background:none;border:none;color:#484f58;cursor:pointer;font-size:.9em;padding:2px 6px;border-radius:4px}
+.edit-btn:hover{color:#58a6ff;background:#58a6ff22}
+.alias-row{display:flex;gap:8px;padding:6px 12px 8px 28px;background:#161b22;border:1px solid #30363d;border-top:none;border-radius:0 0 8px 8px;margin-top:-7px;margin-bottom:6px}
+.alias-row input{flex:1;padding:4px 8px;border:1px solid #30363d;border-radius:6px;background:#0d1117;color:#f0f6fc;font-family:"SF Mono",Monaco,monospace;font-size:.85em}
+.alias-row input:focus{outline:none;border-color:#58a6ff}
+.alias-row button{padding:4px 10px;border:none;border-radius:6px;font-size:.8em;cursor:pointer;font-weight:600}
+.alias-row .save-btn{background:#238636;color:#fff}
+.alias-row .save-btn:hover{background:#2ea043}
+.alias-row .clear-btn{background:#21262d;color:#c9d1d9;border:1px solid #30363d}
+.alias-row .clear-btn:hover{border-color:#f85149;color:#f85149}
+.alias-row .settings-group{display:flex;flex-direction:column;gap:8px;width:100%}
+.alias-row .setting-line{display:flex;align-items:center;gap:8px}
+.alias-row .setting-label{font-size:.75em;text-transform:uppercase;letter-spacing:.5px;color:#8b949e;min-width:50px}
+.cents-btns{display:flex;gap:4px;flex:1}
+.cents-btns button{flex:1;padding:4px 8px;border:1px solid #30363d;border-radius:6px;background:#21262d;color:#c9d1d9;font-size:.8em;cursor:pointer;transition:all .15s}
+.cents-btns button:hover{border-color:#58a6ff;color:#58a6ff}
+.cents-btns button.active{background:#1f6feb;border-color:#1f6feb;color:#fff;font-weight:600}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>TICKER CONTROL</h1>
+
+<div class="card">
+<h2>Display Mode</h2>
+<div class="mode-btns">
+<button id="btn-single" onclick="setMode('single')">Single</button>
+<button id="btn-slideshow" onclick="setMode('slideshow')">Slideshow</button>
+<button id="btn-list" onclick="setMode('list')">List</button>
+</div>
+<div id="slideshow-interval-row" class="interval-row" style="display:none">
+<div class="interval-header">
+<span class="interval-label">Interval</span>
+<span id="slideshow-interval-val" class="interval-val">5s</span>
+</div>
+<input type="range" id="slideshow-interval" min="2" max="60" value="5">
+</div>
+</div>
+
+<div class="card">
+<h2>Symbols</h2>
+<div class="add-row" id="single-row" style="display:none">
+<input type="text" id="single-input" placeholder="BTC-USD" onkeydown="if(event.key==='Enter')setSingle()">
+<button onclick="setSingle()">Set</button>
+</div>
+<div id="single-alias-row" style="display:none"></div>
+<ul class="symbols-list" id="symbols-list"></ul>
+<div class="add-row" id="add-row">
+<input type="text" id="sym-input" placeholder="AAPL, BTC-USD, CL=F ..." onkeydown="if(event.key==='Enter')addSym()">
+<button onclick="addSym()">Add</button>
+</div>
+</div>
+
+<div class="card" id="card-sym-font">
+<h2>Ticker Font</h2>
+<div class="font-row">
+<select id="sym-font-select">
+<option value="">Loading...</option>
+</select>
+</div>
+</div>
+
+<div class="card" id="card-font">
+<h2>Price Font</h2>
+<div class="font-row">
+<select id="font-select">
+<option value="">Loading...</option>
+</select>
+</div>
+</div>
+
+<div class="card" id="card-info-font">
+<h2>Change Font</h2>
+<div class="font-row">
+<select id="info-font-select">
+<option value="">Loading...</option>
+</select>
+</div>
+</div>
+
+<div class="card" id="preview-card">
+<h2 id="preview-label">Preview</h2>
+<pre id="preview-pre">(select a font to preview)</pre>
+</div>
+
+<button id="apply-all-btn" class="apply-all-btn" onclick="applyAll()" style="display:none">Apply All</button>
+
+<div class="status-bar"><span class="dot"></span>Connected to ticker</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var fontsLoaded = false;
+var symFontsLoaded = false;
+var infoFontsLoaded = false;
+
+// Applied font state (populated by refresh() from /api/status)
+var appliedFont = null;
+var appliedSymFont = null;
+var appliedInfoFont = null;
+
+// Pending font selections (set by user; cleared after applyAll())
+var pendingFont = null;
+var pendingSymFont = null;
+var pendingInfoFont = null;
+
+// Debounce timers for preview fetch
+var previewTimer = null;
+
+// Drag state guard — prevents refresh() from rebuilding DOM during active drag
+var dragging = false;
+var dragSrc = null;
+
+// Editing guard — prevents refresh() from rebuilding DOM while alias edit is open
+var editing = false;
+
+function updatePendingState() {
+  var anyPending = false;
+
+  var cardFont = document.getElementById("card-font");
+  if (pendingFont !== null && pendingFont !== appliedFont) {
+    cardFont.classList.add("pending");
+    anyPending = true;
+  } else {
+    cardFont.classList.remove("pending");
+  }
+
+  var cardSym = document.getElementById("card-sym-font");
+  if (pendingSymFont !== null && pendingSymFont !== appliedSymFont) {
+    cardSym.classList.add("pending");
+    anyPending = true;
+  } else {
+    cardSym.classList.remove("pending");
+  }
+
+  var cardInfo = document.getElementById("card-info-font");
+  if (pendingInfoFont !== null && pendingInfoFont !== appliedInfoFont) {
+    cardInfo.classList.add("pending");
+    anyPending = true;
+  } else {
+    cardInfo.classList.remove("pending");
+  }
+
+  var btn = document.getElementById("apply-all-btn");
+  btn.style.display = anyPending ? "block" : "none";
+}
+
+function applyAll() {
+  // Determine the effective value for each slot:
+  // use the pending value if set, otherwise fall back to the currently applied value.
+  var f    = pendingFont     !== null ? pendingFont     : appliedFont;
+  var sf   = pendingSymFont  !== null ? pendingSymFont  : appliedSymFont;
+  var inf  = pendingInfoFont !== null ? pendingInfoFont : appliedInfoFont;
+
+  // Only fire requests for slots that actually changed
+  var ops = [];
+  if (f   !== null && f   !== appliedFont)     ops.push(function() { api("/font/"      + encodeURIComponent(f),   null); });
+  if (sf  !== null && sf  !== appliedSymFont)  ops.push(function() { api("/sym_font/"  + encodeURIComponent(sf),  null); });
+  if (inf !== null && inf !== appliedInfoFont) ops.push(function() { api("/info_font/" + encodeURIComponent(inf), null); });
+
+  if (ops.length === 0) return;  // nothing to apply
+
+  // Fire all ops (parallel)
+  ops.forEach(function(op) { op(); });
+
+  // Optimistically update applied state and clear pending
+  if (f   !== appliedFont)    { appliedFont     = f;   pendingFont     = null; }
+  if (sf  !== appliedSymFont) { appliedSymFont  = sf;  pendingSymFont  = null; }
+  if (inf !== appliedInfoFont){ appliedInfoFont = inf; pendingInfoFont = null; }
+
+  updatePendingState();  // clears amber borders, hides Apply All button (D-05)
+  toast("Applied");      // reuse existing toast (D-05)
+  refresh();             // sync with server
+}
+
+function fetchAllPreviews() {
+  var pre = document.getElementById("preview-pre");
+  var label = document.getElementById("preview-label");
+
+  // Resolve effective font for each slot: pending if set, otherwise applied
+  var fonts = {
+    sym_font:  pendingSymFont  !== null ? pendingSymFont  : appliedSymFont,
+    font:      pendingFont     !== null ? pendingFont     : appliedFont,
+    info_font: pendingInfoFont !== null ? pendingInfoFont : appliedInfoFont
+  };
+
+  // Static label — all three slots always shown together
+  label.textContent = "Preview";
+
+  // Combined loading state: three-line placeholder in dim color
+  pre.style.color = "#8b949e";
+  pre.textContent = "Ticker  \u2014 Loading...\nPrice   \u2014 Loading...\nChange  \u2014 Loading...";
+
+  // Track results and errors per slot
+  var results = { sym_font: null, font: null, info_font: null };
+  var errors  = { sym_font: null, font: null, info_font: null };
+
+  // Map slot names to human-readable labels for error messages
+  function slotLabel(s) {
+    return { font: "Price", sym_font: "Ticker", info_font: "Change" }[s] || s;
+  }
+
+  // Render combined output once all three slots have resolved
+  function renderCombined() {
+    var slotOrder = ["sym_font", "font", "info_font"];
+    var allResolved = slotOrder.every(function(s) {
+      return results[s] !== null || errors[s] !== null;
+    });
+    if (!allResolved) return;
+
+    var anyError = false;
+    var lines = [];
+    slotOrder.forEach(function(s) {
+      if (errors[s]) {
+        anyError = true;
+        lines.push("--- " + slotLabel(s) + " error: " + errors[s] + " ---");
+      } else {
+        lines.push(results[s]);
+      }
+    });
+
+    pre.textContent = lines.join("\n\n");  // textContent, never innerHTML (PITFALLS.md Pitfall 3)
+    pre.style.color = anyError ? "#f85149" : "#e1e4e8";
+  }
+
+  // Fire one XHR per slot; skip slots where font is not yet loaded
+  ["sym_font", "font", "info_font"].forEach(function(slot) {
+    var fontName = fonts[slot];
+    if (fontName === null || fontName === undefined) {
+      // Page not yet refreshed — mark slot as resolved with placeholder text
+      results[slot] = "(not loaded)";
+      renderCombined();
+      return;
+    }
+
+    var x = new XMLHttpRequest();
+    x.open("GET", "/preview/" + slot + "/" + encodeURIComponent(fontName));
+    x.onload = function() {
+      if (x.status === 200) {
+        results[slot] = x.responseText;
+      } else {
+        errors[slot] = x.responseText || "(preview unavailable)";
+      }
+      renderCombined();
+    };
+    x.onerror = function() {
+      errors[slot] = "(server unreachable)";
+      renderCombined();
+    };
+    x.send();
+  });
+}
+
+function toast(msg) {
+  var t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(function() { t.classList.remove("show"); }, 1500);
+}
+
+function api(path, cb) {
+  var x = new XMLHttpRequest();
+  x.open("GET", path);
+  x.onload = function() {
+    if (cb) cb(x.responseText);
+    toast(x.responseText);
+  };
+  x.send();
+}
+
+function refresh() {
+  var x = new XMLHttpRequest();
+  x.open("GET", "/api/status");
+  x.onload = function() {
+    try {
+      if (dragging || editing) return;  // do not rebuild DOM while drag or edit is in progress
+      var d = JSON.parse(x.responseText);
+
+      ["single", "slideshow", "list"].forEach(function(m) {
+        var b = document.getElementById("btn-" + m);
+        if (b) b.className = d.mode === m ? "active" : "";
+      });
+
+      // Show slideshow interval slider only in slideshow mode
+      var sir = document.getElementById("slideshow-interval-row");
+      sir.style.display = d.mode === "slideshow" ? "block" : "none";
+      if (d.slideshow_interval) {
+        var slider = document.getElementById("slideshow-interval");
+        var label = document.getElementById("slideshow-interval-val");
+        slider.value = d.slideshow_interval;
+        label.textContent = d.slideshow_interval + "s";
+      }
+
+      var ul = document.getElementById("symbols-list");
+      var addRow = document.getElementById("add-row");
+      var singleRow = document.getElementById("single-row");
+      ul.innerHTML = "";
+
+      if (d.mode === "single") {
+        ul.style.display = "none";
+        addRow.style.display = "none";
+        singleRow.style.display = "flex";
+        var si = document.getElementById("single-input");
+        if (document.activeElement !== si) {
+          si.value = d.symbols.length > 0 ? d.symbols[0] : "";
+        }
+        // Show alias info for the single symbol
+        var sar = document.getElementById("single-alias-row");
+        if (d.symbols.length > 0 && !editing) {
+          var ss = d.symbols[0];
+          var sa = (d.aliases && d.aliases[ss]) ? d.aliases[ss] : "";
+          var sc = (d.cents && d.cents[ss]) ? d.cents[ss] : "auto";
+          sar.style.display = "flex";
+          sar.innerHTML = "";
+          sar.style.cssText = "display:flex;align-items:center;gap:8px;padding:4px 0;font-size:.85em;color:#8b949e";
+          var label = document.createElement("span");
+          var parts = [];
+          if (sa) parts.push("Name: " + sa);
+          if (sc !== "auto") parts.push("Cents: " + sc);
+          label.textContent = parts.length > 0 ? parts.join(" · ") : "No custom settings";
+          var eb = document.createElement("button");
+          eb.className = "edit-btn";
+          eb.textContent = "\u270e";
+          eb.title = "Symbol settings";
+          eb.onclick = function() { toggleSingleAliasEdit(sar, ss, sa, sc); };
+          sar.appendChild(label);
+          sar.appendChild(eb);
+        } else if (d.symbols.length === 0) {
+          sar.style.display = "none";
+        }
+      } else {
+        ul.style.display = "";
+        addRow.style.display = "flex";
+        singleRow.style.display = "none";
+        document.getElementById("single-alias-row").style.display = "none";
+        d.symbols.forEach(function(s) {
+          var alias = (d.aliases && d.aliases[s]) ? d.aliases[s] : "";
+          var cents = (d.cents && d.cents[s]) ? d.cents[s] : "auto";
+          var li = document.createElement("li");
+          li.setAttribute("draggable", "true");
+          li.dataset.sym = s;
+
+          // Drag handle
+          var handle = document.createElement("span");
+          handle.className = "drag-handle";
+          handle.textContent = "\u28ff";
+
+          // Symbol display — show alias + raw name
+          var span = document.createElement("span");
+          span.className = "sym";
+          if (alias) {
+            var aliasSpan = document.createElement("span");
+            aliasSpan.className = "alias-name";
+            aliasSpan.textContent = alias;
+            var rawSpan = document.createElement("span");
+            rawSpan.className = "raw-name";
+            rawSpan.textContent = "(" + s + ")";
+            span.appendChild(aliasSpan);
+            span.appendChild(rawSpan);
+          } else {
+            span.textContent = s;
+          }
+
+          // Edit button
+          var editBtn = document.createElement("button");
+          editBtn.className = "edit-btn";
+          editBtn.textContent = "\u270e";
+          editBtn.title = "Set display name";
+          editBtn.onclick = function() { toggleAliasEdit(li, s, alias, cents); };
+
+          // Remove button
+          var btn = document.createElement("button");
+          btn.className = "remove";
+          btn.textContent = "\u00d7";
+          btn.onclick = function() { removeSym(s); };
+
+          li.appendChild(handle);
+          li.appendChild(span);
+          li.appendChild(editBtn);
+          li.appendChild(btn);
+          ul.appendChild(li);
+        });
+      }
+
+      var sel = document.getElementById("font-select");
+      if (!fontsLoaded && d.fonts && d.fonts.length > 0) {
+        sel.innerHTML = "";
+        d.fonts.forEach(function(f) {
+          var o = document.createElement("option");
+          o.value = f;
+          o.textContent = f;
+          if (f === d.font) o.selected = true;
+          sel.appendChild(o);
+        });
+        fontsLoaded = true;
+        appliedFont = d.font;
+      } else {
+        // Track applied state; only sync dropdown if user has no pending change
+        appliedFont = d.font;
+        if (pendingFont === null) sel.value = d.font;
+      }
+
+      var ssel = document.getElementById("sym-font-select");
+      if (!symFontsLoaded && d.fonts && d.fonts.length > 0) {
+        ssel.innerHTML = "";
+        d.fonts.forEach(function(f) {
+          var o = document.createElement("option");
+          o.value = f;
+          o.textContent = f;
+          if (f === d.sym_font) o.selected = true;
+          ssel.appendChild(o);
+        });
+        symFontsLoaded = true;
+        appliedSymFont = d.sym_font;
+      } else {
+        appliedSymFont = d.sym_font;
+        if (pendingSymFont === null) ssel.value = d.sym_font;
+      }
+
+      var isel = document.getElementById("info-font-select");
+      if (!infoFontsLoaded && d.fonts && d.fonts.length > 0) {
+        isel.innerHTML = "";
+        d.fonts.forEach(function(f) {
+          var o = document.createElement("option");
+          o.value = f;
+          o.textContent = f;
+          if (f === d.info_font) o.selected = true;
+          isel.appendChild(o);
+        });
+        infoFontsLoaded = true;
+        appliedInfoFont = d.info_font;
+        // All three font selects now populated — show initial preview
+        if (fontsLoaded && symFontsLoaded) fetchAllPreviews();
+      } else {
+        appliedInfoFont = d.info_font;
+        if (pendingInfoFont === null) isel.value = d.info_font;
+      }
+    } catch(e) {}
+  };
+  x.send();
+}
+
+function setMode(m) { api("/mode/" + m, function() { refresh(); }); }
+function setSingle() {
+  var inp = document.getElementById("single-input");
+  var v = inp.value.trim().toUpperCase();
+  if (!v) return;
+  api("/set/" + encodeURIComponent(v), function() { refresh(); });
+}
+function setFont(f) { api("/font/" + encodeURIComponent(f), function() { refresh(); }); }
+function setSymFont(f) { api("/sym_font/" + encodeURIComponent(f), function() { refresh(); }); }
+function setInfoFont(f) { api("/info_font/" + encodeURIComponent(f), function() { refresh(); }); }
+function addSym() {
+  var inp = document.getElementById("sym-input");
+  var v = inp.value.trim().toUpperCase();
+  if (!v) return;
+  inp.value = "";
+  api("/add/" + encodeURIComponent(v), function() { refresh(); });
+}
+function removeSym(s) { api("/remove/" + encodeURIComponent(s), function() { refresh(); }); }
+
+function buildSymbolSettings(container, rawSym, currentAlias, currentCents, onDone) {
+  var group = document.createElement("div");
+  group.className = "settings-group";
+
+  // Alias line
+  var aliasLine = document.createElement("div");
+  aliasLine.className = "setting-line";
+  var aliasLabel = document.createElement("span");
+  aliasLabel.className = "setting-label";
+  aliasLabel.textContent = "Name";
+  var inp = document.createElement("input");
+  inp.type = "text";
+  inp.value = currentAlias || "";
+  inp.placeholder = "Display name for " + rawSym;
+  inp.style.cssText = "flex:1";
+  aliasLine.appendChild(aliasLabel);
+  aliasLine.appendChild(inp);
+  group.appendChild(aliasLine);
+
+  // Cents line
+  var centsLine = document.createElement("div");
+  centsLine.className = "setting-line";
+  var centsLabel = document.createElement("span");
+  centsLabel.className = "setting-label";
+  centsLabel.textContent = "Cents";
+  var centsBtns = document.createElement("div");
+  centsBtns.className = "cents-btns";
+  var selectedCents = currentCents || "auto";
+  ["auto", "yes", "no"].forEach(function(v) {
+    var b = document.createElement("button");
+    b.textContent = v === "auto" ? "Auto" : v === "yes" ? "Show" : "Hide";
+    if (v === selectedCents) b.className = "active";
+    b.onclick = function() {
+      selectedCents = v;
+      centsBtns.querySelectorAll("button").forEach(function(btn) { btn.className = ""; });
+      b.className = "active";
+      // Apply immediately
+      var x = new XMLHttpRequest();
+      x.open("GET", "/cents/set/" + encodeURIComponent(rawSym) + "/" + v);
+      x.onload = function() { toast(x.responseText); };
+      x.send();
+    };
+    centsBtns.appendChild(b);
+  });
+  centsLine.appendChild(centsLabel);
+  centsLine.appendChild(centsBtns);
+  group.appendChild(centsLine);
+
+  // Buttons line
+  var btnLine = document.createElement("div");
+  btnLine.className = "setting-line";
+  btnLine.style.justifyContent = "flex-end";
+  var saveBtn = document.createElement("button");
+  saveBtn.className = "save-btn";
+  saveBtn.textContent = "Save name";
+  saveBtn.onclick = function() {
+    var val = inp.value.trim();
+    if (val === "" || val === rawSym) {
+      api("/alias/remove/" + encodeURIComponent(rawSym), function() { onDone(); });
+    } else {
+      api("/alias/set/" + encodeURIComponent(rawSym) + "/" + encodeURIComponent(val), function() { onDone(); });
+    }
+  };
+  btnLine.appendChild(saveBtn);
+  group.appendChild(btnLine);
+
+  inp.onkeydown = function(e) {
+    if (e.key === "Enter") saveBtn.click();
+    if (e.key === "Escape") onDone();
+  };
+
+  container.appendChild(group);
+  inp.focus();
+}
+
+function toggleAliasEdit(li, rawSym, currentAlias, currentCents) {
+  var existing = li.nextElementSibling;
+  if (existing && existing.classList.contains("alias-row")) {
+    existing.remove();
+    editing = false;
+    return;
+  }
+
+  editing = true;
+  var row = document.createElement("div");
+  row.className = "alias-row";
+
+  buildSymbolSettings(row, rawSym, currentAlias, currentCents, function() {
+    row.remove();
+    editing = false;
+    refresh();
+  });
+
+  li.parentNode.insertBefore(row, li.nextSibling);
+}
+
+function toggleSingleAliasEdit(container, rawSym, currentAlias, currentCents) {
+  var existing = container.querySelector(".alias-row");
+  if (existing) { existing.remove(); editing = false; return; }
+
+  editing = true;
+  container.innerHTML = "";
+  var row = document.createElement("div");
+  row.className = "alias-row";
+  row.style.cssText = "margin-top:0;border-radius:8px;border:1px solid #30363d";
+
+  buildSymbolSettings(row, rawSym, currentAlias, currentCents, function() {
+    editing = false;
+    refresh();
+  });
+
+  container.appendChild(row);
+}
+
+function reorderSymbols(orderedSyms) {
+  var x = new XMLHttpRequest();
+  x.open("GET", "/reorder/" + orderedSyms.map(encodeURIComponent).join(","));
+  x.onload = function() {
+    if (x.status !== 200) {
+      toast("Reorder failed: " + x.responseText);
+    }
+    refresh();
+  };
+  x.onerror = function() { toast("Reorder error"); };
+  x.send();
+}
+
+// Wire font selects: on change, update pending state and debounce preview fetch
+// (onchange attributes removed from HTML in Plan 01; addEventListener is the wiring)
+document.getElementById("font-select").addEventListener("change", function() {
+  pendingFont = this.value;
+  updatePendingState();
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(fetchAllPreviews, 200);
+});
+
+document.getElementById("sym-font-select").addEventListener("change", function() {
+  pendingSymFont = this.value;
+  updatePendingState();
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(fetchAllPreviews, 200);
+});
+
+document.getElementById("info-font-select").addEventListener("change", function() {
+  pendingInfoFont = this.value;
+  updatePendingState();
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(fetchAllPreviews, 200);
+});
+
+// Drag-to-reorder: HTML5 drag events (desktop)
+var ul = document.getElementById("symbols-list");
+
+ul.addEventListener("dragstart", function(e) {
+  dragSrc = e.target.closest("li");
+  if (!dragSrc) return;
+  dragSrc.classList.add("dragging");
+  dragging = true;
+  e.dataTransfer.effectAllowed = "move";
+});
+
+ul.addEventListener("dragover", function(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  var target = e.target.closest("li");
+  if (target && target !== dragSrc) {
+    var rect = target.getBoundingClientRect();
+    var insertBefore = e.clientY < rect.top + rect.height / 2;
+    ul.insertBefore(dragSrc, insertBefore ? target : target.nextSibling);
+  }
+});
+
+ul.addEventListener("drop", function(e) {
+  e.preventDefault();
+  var order = Array.from(ul.querySelectorAll("li")).map(function(li) {
+    return li.dataset.sym;
+  });
+  reorderSymbols(order);
+});
+
+ul.addEventListener("dragend", function(e) {
+  if (dragSrc) dragSrc.classList.remove("dragging");
+  dragSrc = null;
+  dragging = false;
+});
+
+// Drag-to-reorder: touch fallback (mobile / iOS Safari)
+// Wire on the ul — event delegation for dynamically created handles
+ul.addEventListener("touchstart", function(e) {
+  var handle = e.target.closest(".drag-handle");
+  if (!handle) return;
+  dragSrc = handle.closest("li");
+  dragging = true;
+  e.preventDefault();
+}, { passive: false });
+
+ul.addEventListener("touchmove", function(e) {
+  if (!dragSrc) return;
+  e.preventDefault();
+  var touch = e.touches[0];
+  var over = document.elementFromPoint(touch.clientX, touch.clientY);
+  var targetLi = over ? over.closest("li") : null;
+  if (targetLi && targetLi !== dragSrc && targetLi.closest("#symbols-list")) {
+    var rect = targetLi.getBoundingClientRect();
+    var insertBefore = touch.clientY < rect.top + rect.height / 2;
+    ul.insertBefore(dragSrc, insertBefore ? targetLi : targetLi.nextSibling);
+  }
+}, { passive: false });
+
+ul.addEventListener("touchend", function(e) {
+  if (!dragSrc) return;
+  dragging = false;
+  var order = Array.from(ul.querySelectorAll("li")).map(function(li) {
+    return li.dataset.sym;
+  });
+  dragSrc = null;
+  reorderSymbols(order);
+});
+
+// Slideshow interval slider — update label on drag, send to server on release
+var slideshowSlider = document.getElementById("slideshow-interval");
+slideshowSlider.addEventListener("input", function() {
+  document.getElementById("slideshow-interval-val").textContent = this.value + "s";
+});
+slideshowSlider.addEventListener("change", function() {
+  var x = new XMLHttpRequest();
+  x.open("GET", "/slideshow_interval/" + this.value);
+  x.onload = function() { toast(x.responseText); };
+  x.send();
+});
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
