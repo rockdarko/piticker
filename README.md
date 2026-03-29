@@ -4,6 +4,40 @@ Fullscreen stock and crypto price display for Raspberry Pi with GPIO touchscreen
 
 <!-- TODO: add hero photo of the Pi display here -->
 
+## TL;DR
+
+A Raspberry Pi + a cheap GPIO screen = a desk ticker that shows live prices for stocks, crypto, forex, and commodities. Controlled from your phone. No coding required.
+
+```bash
+git clone https://github.com/rockdarko/piticker.git
+cd piticker
+sudo ./install.sh    # interactive — asks a few questions, handles everything
+```
+
+Open `http://<pi-ip>:8080/` to control it. Done.
+
+**What it does:** Big ASCII art prices on a small screen. Three modes (single, slideshow, list). 300+ fonts. Custom display names. Per-symbol cents control. Drag to reorder. Instant mode switching. All from a web UI on your phone.
+
+**What it needs:** Raspberry Pi, GPIO display, network connection.
+
+## Data Source
+
+Prices come from the [Yahoo Finance](https://finance.yahoo.com/) chart API. Look up any symbol on Yahoo Finance — if it has a page there, PiTicker can display it.
+
+To find the right ticker symbol, search on [finance.yahoo.com](https://finance.yahoo.com/) and use the symbol exactly as shown:
+
+| Type | How to find it | Examples |
+|------|---------------|----------|
+| Stocks | Search company name, use the ticker | `AAPL`, `MSFT`, `NVDA` |
+| Crypto | Search coin name, use the `-USD` pair | `BTC-USD`, `ETH-USD`, `SOL-USD` |
+| Indices | Search index name, starts with `^` | `^GSPC` (S&P 500), `^DJI` (Dow) |
+| Forex | Search currency pair, ends with `=X` | `EURUSD=X`, `GBPUSD=X` |
+| Commodities | Search commodity, ends with `=F` | `CL=F` (Oil), `GC=F` (Gold), `SI=F` (Silver) |
+
+Some symbols look unfriendly on a display (e.g., `CL=F` for oil). PiTicker lets you set a **display name** per symbol — show "Oil" on the screen while fetching data with `CL=F` under the hood. The real ticker is always visible in the web UI so you know what's what.
+
+You can also toggle **cents display** per symbol: some prices (like BTC at $87,000) don't need cents, while others (like a $3.42 forex rate) do. Set each to Auto (drops cents over $1,000), Show (always), or Hide (never).
+
 ## Display Modes
 
 ### Single
@@ -59,17 +93,6 @@ Each symbol can have its own:
 - **Cents preference** — Auto (drops cents for prices over $1,000), Show (always), or Hide (never)
 
 Settings persist across reboots and mode changes.
-
-## Symbols
-
-Works with anything Yahoo Finance supports:
-- **Stocks** — `AAPL`, `MSFT`, `NVDA`, `TSLA`
-- **Crypto** — `BTC-USD`, `ETH-USD`, `SOL-USD`
-- **Indices** — `^GSPC` (S&P 500), `^DJI` (Dow Jones)
-- **Forex** — `EURUSD=X`, `GBPUSD=X`
-- **Commodities** — `CL=F` (Oil), `GC=F` (Gold)
-
-Prices refresh every 60 seconds by default (configurable via CLI argument).
 
 ## Hardware
 
