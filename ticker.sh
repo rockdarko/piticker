@@ -228,10 +228,10 @@ render_big() {
 if [[ -n "$USER_FONT" ]]; then
     FONT="$USER_FONT"
 else
-    FONT=$(pick_font)
+    FONT="ANSI Shadow"
 fi
-SYM_FONT="Banner"
-INFO_FONT="halfiwi"
+SYM_FONT="DOS Rebel"
+INFO_FONT="ntgreek"
 
 # Associative array: raw symbol -> display name (populated by read_aliases)
 declare -A ALIAS_MAP
