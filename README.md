@@ -70,7 +70,7 @@ All symbols displayed simultaneously in a color-coded table with columns for sym
 
 Best for a quick dashboard view of everything at once.
 
-<!-- TODO: list mode photo -->
+> **Note:** List mode currently uses plain console text, which is barely readable on a 3.5" GPIO display. Planning to convert it to figlet rendering once I find a compact font that works well in a table layout.
 
 ## Features
 
