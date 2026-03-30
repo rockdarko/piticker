@@ -77,6 +77,10 @@ Best for a quick dashboard view of everything at once.
 ### Web Control Panel
 Control everything from your phone or laptop — no SSH needed. Dark-themed, mobile-friendly UI served directly from the Pi.
 
+<p align="center">
+  <img src="img/webapp.png" alt="PiTicker web control panel" width="400">
+</p>
+
 - **Mode switching** — tap Single, Slideshow, or List to change instantly
 - **Symbol management** — add, remove, and drag-to-reorder symbols
 - **Display names** — rename any symbol for the display (e.g., "CL=F" → "Oil", "BTC-USD" → "BTC"). The real ticker is always visible alongside the alias
