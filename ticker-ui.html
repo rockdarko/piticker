@@ -256,17 +256,6 @@ function fetchAllPreviews() {
     return { font: "Price", sym_font: "Ticker", info_font: "Change" }[s] || s;
   }
 
-  // Center a block of figlet text: find max line width across all blocks,
-  // then pad each line so it's centered within that width
-  function centerBlock(text, maxWidth) {
-    var blockLines = text.split("\n");
-    return blockLines.map(function(line) {
-      var stripped = line.replace(/\s+$/, "");
-      var pad = Math.max(0, Math.floor((maxWidth - stripped.length) / 2));
-      return Array(pad + 1).join(" ") + stripped;
-    }).join("\n");
-  }
-
   // Render combined output once all three slots have resolved
   function renderCombined() {
     var slotOrder = ["sym_font", "font", "info_font"];
@@ -276,28 +265,17 @@ function fetchAllPreviews() {
     if (!allResolved) return;
 
     var anyError = false;
-
-    // Find the widest line across all blocks for centering
-    var maxWidth = 0;
-    slotOrder.forEach(function(s) {
-      var text = errors[s] ? ("--- " + slotLabel(s) + " error: " + errors[s] + " ---") : (results[s] || "");
-      text.split("\n").forEach(function(line) {
-        var w = line.replace(/\s+$/, "").length;
-        if (w > maxWidth) maxWidth = w;
-      });
-    });
-
-    var blocks = [];
+    var lines = [];
     slotOrder.forEach(function(s) {
       if (errors[s]) {
         anyError = true;
-        blocks.push(centerBlock("--- " + slotLabel(s) + " error: " + errors[s] + " ---", maxWidth));
+        lines.push("--- " + slotLabel(s) + " error: " + errors[s] + " ---");
       } else {
-        blocks.push(centerBlock(results[s], maxWidth));
+        lines.push(results[s]);
       }
     });
 
-    pre.textContent = blocks.join("\n\n");  // textContent, never innerHTML (PITFALLS.md Pitfall 3)
+    pre.textContent = lines.join("\n\n");  // textContent, never innerHTML (PITFALLS.md Pitfall 3)
     pre.style.color = anyError ? "#f85149" : "#e1e4e8";
   }
 
