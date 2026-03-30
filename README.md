@@ -2,7 +2,9 @@
 
 Fullscreen stock and crypto price display for Raspberry Pi with GPIO touchscreen. Prices render as large ASCII art using [figlet](http://www.figlet.org/) fonts, color-coded green/red for up/down. Control everything from your phone via the built-in web UI.
 
-<!-- TODO: add hero photo of the Pi display here -->
+<p align="center">
+  <img src="img/hero-btc.jpg" alt="PiTicker showing BTC price on a Raspberry Pi GPIO display" width="600">
+</p>
 
 ## TL;DR
 
@@ -36,6 +38,10 @@ To find the right ticker symbol, search on [finance.yahoo.com](https://finance.y
 
 Some symbols look unfriendly on a display (e.g., `CL=F` for oil). PiTicker lets you set a **display name** per symbol — show "Oil" on the screen while fetching data with `CL=F` under the hood. The real ticker is always visible in the web UI so you know what's what.
 
+<p align="center">
+  <img src="img/single-oil.jpg" alt="Display name feature — CL=F shown as Oil" width="400">
+</p>
+
 You can also toggle **cents display** per symbol: some prices (like BTC at $87,000) don't need cents, while others (like a $3.42 forex rate) do. Set each to Auto (drops cents over $1,000), Show (always), or Hide (never).
 
 ## Display Modes
@@ -46,15 +52,17 @@ One symbol fills the entire screen. The ticker name renders at the top, the pric
 
 Best for keeping an eye on one thing — BTC on your desk, your main holding on the shelf.
 
-<!-- TODO: single mode photo -->
-
 ### Slideshow
 
 Cycles through a list of symbols one at a time, each displayed fullscreen like single mode. The rotation interval is adjustable from 2 to 60 seconds via a slider in the web UI.
 
 Best for watching a portfolio — set your symbols, set your pace, let it rotate.
 
-<!-- TODO: slideshow mode photo -->
+<p align="center">
+  <img src="img/single-msft.jpg" alt="MSFT price in red — single and slideshow modes share the same fullscreen layout" width="400">
+</p>
+
+> Single and slideshow use the same fullscreen layout — slideshow just rotates through your symbols automatically.
 
 ### List
 
@@ -95,6 +103,10 @@ Each symbol can have its own:
 Settings persist across reboots and mode changes.
 
 ## Hardware
+
+<p align="center">
+  <img src="img/desk-setup.jpg" alt="PiTicker on a desk next to a monitor" width="600">
+</p>
 
 **Raspberry Pi** — any model with GPIO header (tested on Pi 3B+)
 
