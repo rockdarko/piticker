@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="img/piticker.png" alt="PiTicker logo" width="200">
+</p>
+
 # PiTicker
 
 Fullscreen stock and crypto price display for Raspberry Pi with GPIO touchscreen. Prices render as large ASCII art using [figlet](http://www.figlet.org/) fonts, color-coded green/red for up/down. Control everything from your phone via the built-in web UI.
