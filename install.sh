@@ -9,6 +9,18 @@ DEFAULT_PORT=8080
 DEFAULT_TTY=1
 DEFAULT_SYMBOLS="BTC-USD"
 
+# Bookworm+ moved the boot partition to /boot/firmware; /boot holds a stub that
+# the firmware never reads. Resolve once, use everywhere.
+resolve_boot_file() {
+    if [[ -f "/boot/firmware/$1" ]]; then
+        echo "/boot/firmware/$1"
+    else
+        echo "/boot/$1"
+    fi
+}
+BOOT_CONFIG="$(resolve_boot_file config.txt)"
+BOOT_CMDLINE="$(resolve_boot_file cmdline.txt)"
+
 # ── Colors ────────────────────────────────────────────────────
 BOLD="\033[1m"
 DIM="\033[2m"
@@ -84,16 +96,16 @@ GPIO_DETECTED=false
 ROTATE_LINE=""
 CURRENT_ROTATE=""
 
-if [[ -f /boot/config.txt ]]; then
+if [[ -f "$BOOT_CONFIG" ]]; then
     # Look for common GPIO display overlays
-    ROTATE_LINE=$(grep -E "^dtoverlay=.*(tft|lcd|ili|waveshare|piscreen|hy28|joy-IT).*:rotate=" /boot/config.txt 2>/dev/null | tail -1)
+    ROTATE_LINE=$(grep -E "^dtoverlay=.*(tft|lcd|ili|waveshare|piscreen|hy28|joy-IT).*:rotate=" "$BOOT_CONFIG" 2>/dev/null | tail -1)
     if [[ -n "$ROTATE_LINE" ]]; then
         GPIO_DETECTED=true
         CURRENT_ROTATE=$(echo "$ROTATE_LINE" | sed 's/.*rotate=//' | tr -d '[:space:]')
         ok "GPIO display detected: ${ROTATE_LINE}"
     else
         # Check for overlay without rotate parameter
-        OVERLAY_LINE=$(grep -E "^dtoverlay=.*(tft|lcd|ili|waveshare|piscreen|hy28|joy-IT)" /boot/config.txt 2>/dev/null | tail -1)
+        OVERLAY_LINE=$(grep -E "^dtoverlay=.*(tft|lcd|ili|waveshare|piscreen|hy28|joy-IT)" "$BOOT_CONFIG" 2>/dev/null | tail -1)
         if [[ -n "$OVERLAY_LINE" ]]; then
             GPIO_DETECTED=true
             ok "GPIO display detected: ${OVERLAY_LINE}"
@@ -102,7 +114,7 @@ if [[ -f /boot/config.txt ]]; then
 fi
 
 if [[ "$GPIO_DETECTED" == "false" ]]; then
-    warn "No GPIO display overlay found in /boot/config.txt"
+    warn "No GPIO display overlay found in ${BOOT_CONFIG}"
     echo ""
     echo -e "  PiTicker is designed for GPIO displays. If you haven't set up"
     echo -e "  your display yet, see: ${BOLD}https://github.com/goodtft/LCD-show${RESET}"
@@ -234,14 +246,28 @@ if [[ "$ROTATE_CHOICE" == "set" ]]; then
     if [[ -n "$ROTATE_LINE" ]]; then
         # Replace existing rotate value
         NEW_LINE=$(echo "$ROTATE_LINE" | sed "s/rotate=${CURRENT_ROTATE}/rotate=${NEW_ROTATE}/")
-        sed -i "s|${ROTATE_LINE}|${NEW_LINE}|" /boot/config.txt
-        ok "Updated /boot/config.txt: rotate=${NEW_ROTATE}"
+        sed -i "s|${ROTATE_LINE}|${NEW_LINE}|" "$BOOT_CONFIG"
+        ok "Updated ${BOOT_CONFIG}: rotate=${NEW_ROTATE}"
     elif [[ -n "$OVERLAY_LINE" ]]; then
         # Overlay exists but no rotate parameter — append it
-        sed -i "s|${OVERLAY_LINE}|${OVERLAY_LINE}:rotate=${NEW_ROTATE}|" /boot/config.txt
+        sed -i "s|${OVERLAY_LINE}|${OVERLAY_LINE}:rotate=${NEW_ROTATE}|" "$BOOT_CONFIG"
         ok "Added rotate=${NEW_ROTATE} to ${OVERLAY_LINE}"
     else
         warn "Could not find display overlay to update"
+    fi
+fi
+
+# ── Step 8b: Map the console to the GPIO panel ───────────────
+
+if [[ "$GPIO_DETECTED" == "true" ]]; then
+    step "Mapping console to the GPIO display"
+
+    if grep -q "fbcon=map:" "$BOOT_CMDLINE" 2>/dev/null; then
+        ok "Console mapping already present in ${BOOT_CMDLINE}"
+    else
+        # cmdline.txt must stay a single line — append to it, don't add one.
+        sed -i "1s|\\s*$| fbcon=map:10|" "$BOOT_CMDLINE"
+        ok "Added fbcon=map:10 to ${BOOT_CMDLINE}"
     fi
 fi
 
@@ -254,6 +280,7 @@ cat > /etc/systemd/system/piticker.service <<EOF
 Description=PiTicker Display
 After=network-online.target
 Wants=network-online.target
+Conflicts=getty@tty${TTY_NUM}.service
 
 [Service]
 ExecStart=${INSTALL_DIR}/ticker.sh ${SYMBOLS} 60
@@ -285,6 +312,14 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 ok "piticker-ctl.service"
+
+# An autologin getty on the same TTY hangs up the terminal out from under
+# ticker.sh (SIGHUP), and both units respawn forever. The display owns the TTY.
+if systemctl is-enabled "getty@tty${TTY_NUM}.service" &>/dev/null || \
+   systemctl is-active "getty@tty${TTY_NUM}.service" &>/dev/null; then
+    systemctl disable --now "getty@tty${TTY_NUM}.service" &>/dev/null
+    ok "Disabled getty@tty${TTY_NUM} (it would fight PiTicker for the TTY)"
+fi
 
 systemctl daemon-reload
 systemctl enable piticker.service piticker-ctl.service &>/dev/null

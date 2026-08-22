@@ -65,3 +65,9 @@ echo ""
 echo -e "${GREEN}${BOLD}PiTicker uninstalled.${RESET}"
 echo -e "${DIM}Screen rotation settings in /boot/config.txt were not changed.${RESET}"
 echo ""
+
+# PiTicker disabled the getty on its display TTY; give the console back.
+if ! systemctl is-enabled "getty@tty1.service" &>/dev/null; then
+    systemctl enable --now "getty@tty1.service" &>/dev/null && \
+        echo "Re-enabled getty@tty1"
+fi
