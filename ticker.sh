@@ -121,9 +121,15 @@ fi
 
 SLIDESHOW_INTERVAL=5
 
+# Default display names, one "SYMBOL<tab>Name" per line, matching the format
+# tickerctl.sh writes. BTC-USD is unwieldy on a small screen and doubles as the
+# worked example for the feature.
+DEFAULT_ALIASES=$'BTC-USD\tBTC'
+
 # Write initial state only if files don't already exist
 [[ ! -f "$MODE_FILE" ]] && echo "$MODE" > "$MODE_FILE"
 [[ ! -f "$SYMBOLS_FILE" ]] && printf '%s\n' "${SYMBOLS[@]}" > "$SYMBOLS_FILE"
+[[ ! -f "$ALIASES_FILE" ]] && printf '%s\n' "$DEFAULT_ALIASES" > "$ALIASES_FILE"
 [[ -n "$USER_FONT" ]] && echo "$USER_FONT" > "$FONT_FILE"
 
 # ── Yahoo Finance ──────────────────────────────────────────────

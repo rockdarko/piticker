@@ -135,17 +135,27 @@ step "Screen rotation"
 ROTATE_CHOICE="skip"
 if [[ "$GPIO_DETECTED" == "true" ]]; then
     echo -e "  Some GPIO screens mount upside-down depending on case design."
+    echo -e "  ${DIM}On 3.5\" ILI9486 panels 0°/180° are portrait and 90°/270° are"
+    echo -e "  landscape — a portrait console is too narrow for the large price.${RESET}"
     echo -e "  Current rotation: ${BOLD}${CURRENT_ROTATE:-not set}°${RESET}"
     echo ""
-    echo -e "  ${BOLD}1)${RESET} 0°   — Normal (connectors at bottom)"
-    echo -e "  ${BOLD}2)${RESET} 90°  — Rotated left"
-    echo -e "  ${BOLD}3)${RESET} 180° — Flipped upside-down (connectors at top)"
-    echo -e "  ${BOLD}4)${RESET} 270° — Rotated right"
+    echo -e "  ${BOLD}1)${RESET} 0°   — Portrait (connectors at bottom)"
+    echo -e "  ${BOLD}2)${RESET} 90°  — Landscape"
+    echo -e "  ${BOLD}3)${RESET} 180° — Portrait, flipped (connectors at top)"
+    echo -e "  ${BOLD}4)${RESET} 270° — Landscape, flipped ${DIM}(default)${RESET}"
     echo -e "  ${BOLD}5)${RESET} Keep current (${CURRENT_ROTATE:-0}°)"
     echo ""
-    echo -en "  ${BOLD}Choose rotation${RESET} ${DIM}[5]${RESET}: "
+    # Fresh install: default to landscape-flipped, the orientation PiTicker is
+    # designed around. Once a rotation is configured, default to keeping it so
+    # re-running the installer never silently flips a working screen.
+    if [[ -n "$CURRENT_ROTATE" ]]; then
+        ROTATE_DEFAULT=5
+    else
+        ROTATE_DEFAULT=4
+    fi
+    echo -en "  ${BOLD}Choose rotation${RESET} ${DIM}[${ROTATE_DEFAULT}]${RESET}: "
     read -r rot_input
-    rot_input="${rot_input:-5}"
+    rot_input="${rot_input:-$ROTATE_DEFAULT}"
     case "$rot_input" in
         1) NEW_ROTATE=0;   ROTATE_CHOICE="set" ;;
         2) NEW_ROTATE=90;  ROTATE_CHOICE="set" ;;

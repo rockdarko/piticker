@@ -42,6 +42,8 @@ To find the right ticker symbol, search on [finance.yahoo.com](https://finance.y
 
 Some symbols look unfriendly on a display (e.g., `CL=F` for oil). PiTicker lets you set a **display name** per symbol — show "Oil" on the screen while fetching data with `CL=F` under the hood. The real ticker is always visible in the web UI so you know what's what.
 
+A fresh install ships with one display name already set — `BTC-USD` shows as **BTC** — as a worked example. Change or remove it from the web UI like any other; PiTicker only seeds it when no display names exist yet, so it will never overwrite your own.
+
 <p align="center">
   <img src="img/single-oil.jpg" alt="Display name feature — CL=F shown as Oil" width="400">
 </p>
@@ -130,6 +132,20 @@ sudo ./LCD35-show    # for 3.5" screens — reboots the Pi
 ```
 To switch back to HDMI: `sudo ./LCD-hdmi`
 
+> **On Bookworm and later** the boot config lives at `/boot/firmware/config.txt`;
+> `/boot/config.txt` is an inert stub the firmware never reads. LCD-show writes
+> the right file, but anything you edit by hand must go to `/boot/firmware/`.
+>
+> PiTicker also needs the console on the panel rather than HDMI. The installer
+> appends `fbcon=map:10` to `/boot/firmware/cmdline.txt` for you — without it the
+> driver loads, `/dev/fb1` appears, and the screen still stays blank.
+
+**Orientation** — on 3.5" ILI9486 panels `rotate=0` and `rotate=180` are *portrait*
+(320x480, a 40-column console) and `rotate=90` / `rotate=270` are *landscape*
+(480x320, 60 columns). The large price needs the landscape width, so PiTicker
+defaults to `270` — landscape with the ribbon at the top, matching the desk photo
+above. Pick `90` if yours reads upside-down.
+
 ## Install
 
 ```bash
@@ -140,11 +156,18 @@ sudo ./install.sh
 
 The interactive installer will:
 1. Check for GPIO display configuration (links to LCD-show if not found)
-2. Offer to rotate the screen 180° (for upside-down mounted screens)
+2. Offer to set screen rotation — defaults to 270° (landscape) on a fresh
+   install, or to keeping your current setting if one is already configured
 3. Ask for install path, initial symbols, web UI port, and display TTY
 4. Install dependencies (figlet, toilet, jq, curl, socat, inotify-tools)
-5. Set up systemd services that start on boot
-6. Start the display and control server
+5. Install the extended figlet font collection, so the default fonts and the
+   300+ offered in the web UI are available
+6. Map the console to the panel via `fbcon=map:10`
+7. Disable the getty on the display TTY — an autologin getty and PiTicker
+   cannot share a TTY, and the two respawn against each other forever
+   (`uninstall.sh` restores it)
+8. Set up systemd services that start on boot
+9. Start the display and control server
 
 After install, open `http://<pi-ip>:8080/` from any device on the network.
 
