@@ -184,29 +184,46 @@ render_with_font() {
 # Check the natural (unwrapped) width of text in a given font
 # Uses bash ${#line} instead of awk length — awk counts bytes for
 # multi-byte UTF-8 chars (e.g. ANSI Shadow box-drawing), inflating width
+# Reported for a font figlet cannot render, so it loses every fit check.
+FONT_UNUSABLE=99999
+
 natural_width() {
     local font="$1" text="$2"
-    local max=0
+    local max=0 lines=0
     while IFS= read -r line; do
+        lines=$(( lines + 1 ))
         line="${line%"${line##*[! ]}"}"  # trim trailing spaces
         [[ ${#line} -gt $max ]] && max=${#line}
     done < <(figlet -f "$font" -w 1000 "$text" 2>/dev/null)
+    # A missing font makes figlet print nothing. Measured naively that is
+    # width 0, which beats every real font in the fit check and leaves the
+    # caller rendering an empty string. Report it as unusably wide instead.
+    if [[ $lines -eq 0 || $max -eq 0 ]]; then
+        echo "$FONT_UNUSABLE"
+        return
+    fi
     echo "$max"
 }
 
 render_big() {
     local text="$1" width=$(( $2 - 2 ))
-    local nw
+    local nw out
 
-    # Try each font: user's choice, then Colossal, then Banner
-    # For each font, try: full text, then without cents
+    # Try each font: user's choice, then progressively smaller fallbacks.
+    # For each font, try: full text, then without cents.
+    # Font names are case-sensitive; "Banner"/"Colossal" come from the
+    # extended pack, "banner"/"big"/"standard" ship with Debian's figlet,
+    # so the chain still lands somewhere if the pack is not installed.
     local f
-    for f in "$FONT" "Colossal" "Banner" "big"; do
+    for f in "$FONT" "Colossal" "Banner" "banner" "big" "standard"; do
         # With cents
         nw=$(natural_width "$f" "$text")
         if [[ $nw -le $width ]]; then
-            render_with_font "$f" "$text" "$width"
-            return
+            out=$(render_with_font "$f" "$text" "$width")
+            if [[ -n "$out" ]]; then
+                printf '%s\n' "$out"
+                return
+            fi
         fi
 
         # Without cents
@@ -214,8 +231,11 @@ render_big() {
         if [[ "$no_cents" != "$text" ]]; then
             nw=$(natural_width "$f" "$no_cents")
             if [[ $nw -le $width ]]; then
-                render_with_font "$f" "$no_cents" "$width"
-                return
+                out=$(render_with_font "$f" "$no_cents" "$width")
+                if [[ -n "$out" ]]; then
+                    printf '%s\n' "$out"
+                    return
+                fi
             fi
         fi
     done

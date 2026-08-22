@@ -220,6 +220,39 @@ for pkg in figlet toilet jq curl socat inotify-tools; do
     fi
 done
 
+# ── Step 6b: Extended figlet fonts ───────────────────────────
+
+step "Installing extended figlet fonts"
+
+# Debian's figlet ships ~18 .flf fonts; the defaults here (ANSI Shadow,
+# DOS Rebel) and most of the 300+ the web UI offers come from the upstream
+# collection. Best-effort: the render path falls back to stock fonts if this
+# is unavailable, so a failure here is not fatal.
+FONT_PACK_URL="https://github.com/xero/figlet-fonts/archive/refs/heads/master.tar.gz"
+
+if figlet -f "ANSI Shadow" x &>/dev/null; then
+    ok "Extended fonts already present"
+else
+    font_tmp=$(mktemp -d)
+    if curl -sL --max-time 120 "$FONT_PACK_URL" | tar xz -C "$font_tmp" 2>/dev/null; then
+        font_n=0
+        while IFS= read -r flf; do
+            if cp -n "$flf" /usr/share/figlet/ 2>/dev/null; then
+                font_n=$(( font_n + 1 ))
+            fi
+        done < <(find "$font_tmp" -name "*.flf")
+        if [[ $font_n -gt 0 ]]; then
+            ok "Installed ${font_n} fonts to /usr/share/figlet/"
+        else
+            warn "Font pack downloaded but no fonts were installed"
+        fi
+    else
+        warn "Could not fetch extended fonts — falling back to stock figlet fonts"
+        echo -e "  ${DIM}Source: ${FONT_PACK_URL}${RESET}"
+    fi
+    rm -rf "$font_tmp"
+fi
+
 # ── Step 7: Copy files ───────────────────────────────────────
 
 step "Installing PiTicker files"
